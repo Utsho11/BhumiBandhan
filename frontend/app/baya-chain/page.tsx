@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { useLanguage } from "../../context/LanguageContext";
 import { fallbackParcels } from "../../lib/api";
+import { isDagMatch } from "../../lib/digitConverter";
 import {
   FileText,
   GitCommit,
@@ -25,7 +26,7 @@ export default function BayaChainPage() {
   const [kara, setKara] = useState<number>(0);
   const [kranti, setKranti] = useState<number>(0);
 
-  const parcel = fallbackParcels.find((p) => p.dagNo === selectedDag) || fallbackParcels[0];
+  const parcel = fallbackParcels.find((p) => isDagMatch(p.dagNo, selectedDag)) || fallbackParcels[0];
 
   // Ana to decimal conversion: 16 Anna = 1.000, 1 Anna = 20 Ganda, 1 Ganda = 4 Kara, 1 Kara = 3 Kranti
   // Total Krantis in 16 Anna = 16 * 20 * 4 * 3 = 3840 krantis
@@ -68,17 +69,26 @@ export default function BayaChainPage() {
               </div>
 
               {/* Sample Switcher */}
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setSelectedDag("1425")}
-                  className={`text-xs px-3 py-1.5 rounded-lg border font-bold transition cursor-pointer ${
-                    selectedDag === "1425"
-                      ? "bg-[#064E3B] text-white border-[#064E3B]"
-                      : "bg-slate-50 text-slate-700 hover:bg-slate-100"
-                  }`}
-                >
-                  দাগ ১৪২৫ (সম্পূর্ণ চেইন)
-                </button>
+              <div className="flex flex-wrap gap-2">
+                {[
+                  { dag: "1425", label: "দাগ ১৪২৫ (নিষ্কলুষ চেইন)" },
+                  { dag: "1426", label: "দাগ ১৪২৬ (বিএস রেকর্ড)" },
+                  { dag: "782", label: "দাগ ৭৮২ (আরএস রেকর্ড)" },
+                  { dag: "991", label: "দাগ ৯৯১ (আরএস রেকর্ড)" },
+                  { dag: "302", label: "দাগ ৩০২ (খাস রেকর্ড)" },
+                ].map((item) => (
+                  <button
+                    key={item.dag}
+                    onClick={() => setSelectedDag(item.dag)}
+                    className={`text-xs px-3 py-1.5 rounded-lg border font-bold transition cursor-pointer ${
+                      isDagMatch(selectedDag, item.dag)
+                        ? "bg-[#064E3B] text-white border-[#064E3B]"
+                        : "bg-slate-50 text-slate-700 hover:bg-slate-100 border-slate-200"
+                    }`}
+                  >
+                    {item.label}
+                  </button>
+                ))}
               </div>
             </div>
 

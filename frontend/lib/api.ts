@@ -1,4 +1,5 @@
 import { ILandParcel, IMutationApplication } from "../types";
+import { isDagMatch, getSearchVariants, toBengaliNumerals, toEnglishNumerals } from "./digitConverter";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "https://server-pied-eta.vercel.app/api";
 
@@ -15,22 +16,53 @@ export const fetchParcels = async (query?: { mouza?: string; dag?: string; ulpin
     return json.data || [];
   } catch (error) {
     console.warn("Backend API unavailable, using built-in fallback dataset", error);
-    return fallbackParcels;
+    let filtered = [...fallbackParcels];
+    if (query?.dag) {
+      filtered = filtered.filter((p) => isDagMatch(p.dagNo, query.dag));
+    }
+    if (query?.ulpin) {
+      filtered = filtered.filter((p) => isDagMatch(p.ulpin, query.ulpin));
+    }
+    if (query?.mouza) {
+      const m = query.mouza.toLowerCase();
+      filtered = filtered.filter(
+        (p) =>
+          p.mouzaBn.toLowerCase().includes(m) ||
+          m.includes(p.mouzaBn.toLowerCase()) ||
+          p.mouzaEn.toLowerCase().includes(m)
+      );
+    }
+    return filtered;
   }
 };
 
 export const fetchSingleParcel = async (identifier: string): Promise<ILandParcel | null> => {
-  try {
-    const res = await fetch(`${API_BASE}/parcels/${encodeURIComponent(identifier)}`);
-    if (!res.ok) throw new Error("Failed to fetch parcel");
-    const json = await res.json();
-    return json.data;
-  } catch (error) {
-    const found = fallbackParcels.find(
-      (p) => p.dagNo === identifier || p.ulpin === identifier || p.currentKhatianNo.includes(identifier)
-    );
-    return found || null;
+  const trimmed = identifier.trim();
+  const variants = getSearchVariants(trimmed);
+
+  // 1. Try querying the backend with each variant
+  for (const v of variants) {
+    try {
+      const res = await fetch(`${API_BASE}/parcels/${encodeURIComponent(v)}`);
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success && json.data) {
+          return json.data;
+        }
+      }
+    } catch {
+      // Continue to next variant or fallback
+    }
   }
+
+  // 2. Resilient memory fallback matching both scripts and prefixes
+  const found = fallbackParcels.find(
+    (p) =>
+      isDagMatch(p.dagNo, trimmed) ||
+      isDagMatch(p.ulpin, trimmed) ||
+      variants.some((v) => p.currentKhatianNo.toLowerCase().includes(v.toLowerCase()))
+  );
+  return found || null;
 };
 
 export const checkPlotRiskAudit = async (input: {
@@ -43,29 +75,44 @@ export const checkPlotRiskAudit = async (input: {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(input),
     });
-    return await res.json();
-  } catch (error) {
-    const parcel = fallbackParcels.find(
-      (p) => p.dagNo === input.dagNo || p.mouzaBn.includes(input.mouza)
-    );
-    if (!parcel) {
-      return {
-        found: false,
-        messageBn: "প্রদত্ত মৌজা ও দাগ নম্বরে কোনো তথ্য মেলেনি।",
-      };
+    if (res.ok) {
+      const json = await res.json();
+      if (json.found) return json;
     }
+  } catch (error) {
+    console.warn("Verify API unavailable, using resilient fallback", error);
+  }
+
+  const parcel = fallbackParcels.find((p) => {
+    const matchDag = isDagMatch(p.dagNo, input.dagNo) || isDagMatch(p.ulpin, input.dagNo);
+    if (!matchDag) return false;
+    if (!input.mouza) return true;
+    const m = input.mouza.toLowerCase();
+    return (
+      p.mouzaBn.toLowerCase().includes(m) ||
+      m.includes(p.mouzaBn.toLowerCase()) ||
+      p.mouzaEn.toLowerCase().includes(m)
+    );
+  });
+
+  if (!parcel) {
     return {
-      found: true,
-      parcel,
-      auditReport: {
-        calculatedScore: parcel.trustScore,
-        riskLevel: parcel.riskLevel,
-        criticalFlagsBn: parcel.riskSummaryBn,
-        warningFlagsBn: parcel.liens.length > 0 ? ["ব্যাংক লিয়েন রয়েছে"] : [],
-        isCleanTitle: parcel.trustScore >= 80,
-      },
+      found: false,
+      messageBn: "প্রদত্ত মৌজা ও দাগ নম্বরে কোনো তথ্য মেলেনি।",
     };
   }
+
+  return {
+    found: true,
+    parcel,
+    auditReport: {
+      calculatedScore: parcel.trustScore,
+      riskLevel: parcel.riskLevel,
+      criticalFlagsBn: parcel.riskSummaryBn,
+      warningFlagsBn: parcel.liens.length > 0 ? ["ব্যাংক লিয়েন রয়েছে"] : [],
+      isCleanTitle: parcel.trustScore >= 80,
+    },
+  };
 };
 
 export const fetchMutations = async (): Promise<IMutationApplication[]> => {
@@ -217,7 +264,28 @@ export const fallbackParcels: ILandParcel[] = [
         portionSatak: 18.0,
       },
     ],
-    bayaChain: [],
+    bayaChain: [
+      {
+        surveyType: "CS",
+        year: 1928,
+        khatianNo: "CS-১৪৩",
+        dagNo: "CS-১১০৫",
+        recordedOwnerBn: "কফিল উদ্দিন",
+        recordedOwnerEn: "Kafil Uddin",
+        status: "verified",
+        notesBn: "সিএস রেকর্ড সংরক্ষিত।",
+      },
+      {
+        surveyType: "RS",
+        year: 1982,
+        khatianNo: "RS-৮৯১",
+        dagNo: "RS-১৪২৬",
+        recordedOwnerBn: "মোঃ কামাল হোসেন",
+        recordedOwnerEn: "Md. Kamal Hossain",
+        status: "verified",
+        notesBn: "আরএস খতিয়ানে হালনাগাদ।",
+      },
+    ],
     liens: [],
     isKhas: false,
     isAcquiredByGovt: false,
@@ -270,7 +338,18 @@ export const fallbackParcels: ILandParcel[] = [
         portionSatak: 15.0,
       },
     ],
-    bayaChain: [],
+    bayaChain: [
+      {
+        surveyType: "RS",
+        year: 1985,
+        khatianNo: "RS-৪২০",
+        dagNo: "RS-৭৮২",
+        recordedOwnerBn: "মোজাম্মেল হক চৌধুরী",
+        recordedOwnerEn: "Mozammel Haque Chowdhury",
+        status: "verified",
+        notesBn: "মূল মালিকানার দলিল বিদ্যমান।",
+      },
+    ],
     liens: [
       {
         lienId: "LIEN-SBL-2024-90",
@@ -295,6 +374,126 @@ export const fallbackParcels: ILandParcel[] = [
       "ব্যাংকের লিখিত অনাপত্তিপত্র (NOC) ব্যতিরেকে জমি ক্রয় করা গুরুতর আর্থিক ঝুঁকি।",
     ],
     riskSummaryEn: ["Mortgage lien active with Sonali Bank PLC."],
+  },
+  {
+    ulpin: "26-26-72-103-00991",
+    divisionBn: "ঢাকা",
+    divisionEn: "Dhaka",
+    districtBn: "ঢাকা",
+    districtEn: "Dhaka",
+    upazilaBn: "আশুলিয়া",
+    upazilaEn: "Ashulia",
+    mouzaBn: "বাইপাইল",
+    mouzaEn: "Baipail",
+    jlNo: "১০৩",
+    dagNo: "৯৯১",
+    currentKhatianNo: "BS-৯০৮১",
+    khatianType: "BS",
+    landClassBn: "রাস্তা সংলগ্ন ভিটি",
+    landClassEn: "Roadside Highland",
+    totalAreaSatak: 24.0,
+    totalAreaKatha: 14.55,
+    coordinates: { lat: 23.9421, lng: 90.2819 },
+    owners: [
+      {
+        ownerId: "OWN-005",
+        nameBn: "বজলুর রহমান",
+        nameEn: "Bazlur Rahman",
+        fatherNameBn: "মকবুল হোসেন",
+        nidMasked: "1972-XXXX-XXXX-1123",
+        shareAnna: "১৬ আনা ০ গণ্ডা",
+        shareDecimal: 1.0,
+        portionSatak: 24.0,
+      },
+    ],
+    bayaChain: [
+      {
+        surveyType: "RS",
+        year: 1980,
+        khatianNo: "RS-১২১",
+        dagNo: "RS-৯৯১",
+        recordedOwnerBn: "বজলুর রহমান",
+        recordedOwnerEn: "Bazlur Rahman",
+        status: "verified",
+        notesBn: "মূল রেকর্ডভুক্ত মালিক।",
+      },
+    ],
+    liens: [],
+    isKhas: false,
+    isAcquiredByGovt: true,
+    hasLitigation: true,
+    transitLock: { isLocked: false },
+    trustScore: 20,
+    riskLevel: "critical",
+    riskSummaryBn: [
+      "বিপদজনক: ঢাকা জেলা প্রশাসক (DC) কার্যালয় কর্তৃক মহাসড়ক প্রশস্তকরণ প্রকল্পে ৪ ধারা ও ৭ ধারা অধিগ্রহণ নোটিশ জারি করা হয়েছে।",
+      "জমির ক্ষতিপূরণ সরকারের রাজস্ব বিভাগ থেকে প্রদান করা হবে; ব্যক্তিগত হস্তান্তর সম্পূর্ণ নিষিদ্ধ।",
+      "যুগ্ম জেলা জজ আদালত-২ এ অংশীদারিত্ব নিয়ে স্বত্ব মোকদ্দমা (Title Suit # ১৪/২০২৩) চলমান রয়েছে।",
+    ],
+    riskSummaryEn: [
+      "CRITICAL: Section 4 & 7 Government Land Acquisition notices issued by DC Office for highway expansion.",
+      "Private conveyance is legally barred; compensation will be disbursed directly by District Land Acquisition Officer.",
+      "Pending ownership dispute in Joint District Judge Court (Title Suit # 14/2023).",
+    ],
+  },
+  {
+    ulpin: "26-26-72-103-00302",
+    divisionBn: "ঢাকা",
+    divisionEn: "Dhaka",
+    districtBn: "ঢাকা",
+    districtEn: "Dhaka",
+    upazilaBn: "আশুলিয়া",
+    upazilaEn: "Ashulia",
+    mouzaBn: "বাইপাইল",
+    mouzaEn: "Baipail",
+    jlNo: "১০৩",
+    dagNo: "৩০২",
+    currentKhatianNo: "BS-১১৪৪",
+    khatianType: "BS",
+    landClassBn: "ডোবা / জলাশয়",
+    landClassEn: "Wetland / Pond",
+    totalAreaSatak: 35.0,
+    totalAreaKatha: 21.21,
+    coordinates: { lat: 23.9482, lng: 90.2845 },
+    owners: [
+      {
+        ownerId: "OWN-006",
+        nameBn: "বাংলাদেশ সরকার (খাস খতিয়ান-১)",
+        nameEn: "Government of Bangladesh (Khas)",
+        fatherNameBn: "প্রতিনিধি: কালেক্টর / ডিসি ঢাকা",
+        nidMasked: "GOVT-KHAS-PARCEL-01",
+        shareAnna: "১৬ আনা ০ গণ্ডা",
+        shareDecimal: 1.0,
+        portionSatak: 35.0,
+      },
+    ],
+    bayaChain: [
+      {
+        surveyType: "SA",
+        year: 1956,
+        khatianNo: "SA-০১",
+        dagNo: "SA-৩০২",
+        recordedOwnerBn: "বাংলাদেশ সরকার (১নং খাস খতিয়ান)",
+        recordedOwnerEn: "Govt. of Bangladesh",
+        status: "verified",
+        notesBn: "রাষ্ট্রীয় অধিগ্রহণ ও প্রজাস্বত্ব আইন ১৯৫০ অনুযায়ী সরকারের অনুকূলে ভেস্টেড।",
+      },
+    ],
+    liens: [],
+    isKhas: true,
+    isAcquiredByGovt: false,
+    hasLitigation: false,
+    transitLock: { isLocked: false },
+    trustScore: 5,
+    riskLevel: "critical",
+    riskSummaryBn: [
+      "গুরুতর সতর্কতা: এটি ১নং খাস খতিয়ানের সরকারি সম্পত্তি।",
+      "কোনো দালাল বা ব্যক্তিমালিক ভুয়া দলিল সৃষ্টি করে এই দাগের জমি বিক্রি করার চেষ্টা করলে তা ফৌজদারি অপরাধ বলে গণ্য হবে।",
+    ],
+    riskSummaryEn: [
+      "CRITICAL: Officially registered Government Khas (Schedule 1) public property.",
+      "Any private sale deed or power of attorney is counterfeit and constitutes a criminal offense.",
+    ],
   },
 ];
 

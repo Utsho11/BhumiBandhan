@@ -4,6 +4,7 @@ import React, { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { useLanguage } from "../../context/LanguageContext";
 import { fetchSingleParcel, fallbackParcels } from "../../lib/api";
+import { isDagMatch } from "../../lib/digitConverter";
 import { ILandParcel } from "../../types";
 import {
   ShieldCheck,
@@ -109,7 +110,13 @@ function CheckBeforeYouBuyContent() {
                 type="text"
                 value={selectedDag}
                 onChange={(e) => setSelectedDag(e.target.value)}
-                placeholder="যেমন: ১৪২৫"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    handleAudit(selectedDag);
+                  }
+                }}
+                placeholder="যেমন: ১৪২৫ বা 302"
                 className="w-full text-xs bg-white border border-slate-300 rounded-lg p-2.5 font-bold text-slate-900 focus:outline-none focus:border-[#064E3B]"
               />
               <button
@@ -134,7 +141,7 @@ function CheckBeforeYouBuyContent() {
                 handleAudit(item.dag);
               }}
               className={`px-2.5 py-1 rounded-md border text-[11px] font-semibold transition cursor-pointer ${
-                selectedDag === item.dag
+                isDagMatch(selectedDag, item.dag) || (parcel && isDagMatch(parcel.dagNo, item.dag))
                   ? "bg-[#064E3B] text-white border-[#064E3B]"
                   : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100"
               }`}

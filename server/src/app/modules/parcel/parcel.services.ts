@@ -1,5 +1,6 @@
 import { pool } from "../../../utils/pg";
 import { ILandParcel, syntheticLandParcels } from "../../../data/land-records";
+import { getSearchVariants, isDagMatch } from "../../../utils/digitConverter";
 
 export const getAllParcels = async (query: {
   division?: string;
@@ -15,16 +16,25 @@ export const getAllParcels = async (query: {
     const params: any[] = [];
 
     if (query.ulpin) {
-      params.push(`%${query.ulpin}%`);
-      sql += ` AND ulpin ILIKE $${params.length}`;
+      const uVariants = getSearchVariants(query.ulpin);
+      const orClauses = uVariants.map((v) => {
+        params.push(`%${v}%`);
+        return `ulpin ILIKE $${params.length}`;
+      });
+      sql += ` AND (${orClauses.join(" OR ")})`;
     }
     if (query.dag) {
-      params.push(`%${query.dag}%`);
-      sql += ` AND dag_no ILIKE $${params.length}`;
+      const dVariants = getSearchVariants(query.dag);
+      const orClauses = dVariants.map((v) => {
+        params.push(v);
+        params.push(`%${v}%`);
+        return `(dag_no = $${params.length - 1} OR dag_no ILIKE $${params.length})`;
+      });
+      sql += ` AND (${orClauses.join(" OR ")})`;
     }
     if (query.mouza) {
       params.push(`%${query.mouza}%`);
-      sql += ` AND (mouza_bn ILIKE $${params.length})`;
+      sql += ` AND (mouza_bn ILIKE $${params.length} OR mouza_en ILIKE $${params.length})`;
     }
 
     const res = await pool.query(sql, params);
@@ -37,20 +47,39 @@ export const getAllParcels = async (query: {
 
   // Resilient memory fallback
   let parcels = [...syntheticLandParcels];
-  if (query.ulpin) parcels = parcels.filter((p) => p.ulpin.toLowerCase().includes(query.ulpin!.toLowerCase()));
-  if (query.mouza) parcels = parcels.filter((p) => p.mouzaBn.includes(query.mouza!) || p.mouzaEn.toLowerCase().includes(query.mouza!.toLowerCase()));
-  if (query.dag) parcels = parcels.filter((p) => p.dagNo.includes(query.dag!));
+  if (query.ulpin) {
+    const uVariants = getSearchVariants(query.ulpin);
+    parcels = parcels.filter((p) =>
+      uVariants.some((v) => p.ulpin.toLowerCase().includes(v.toLowerCase()))
+    );
+  }
+  if (query.mouza) {
+    const m = query.mouza.toLowerCase();
+    parcels = parcels.filter(
+      (p) =>
+        p.mouzaBn.toLowerCase().includes(m) ||
+        m.includes(p.mouzaBn.toLowerCase()) ||
+        p.mouzaEn.toLowerCase().includes(m)
+    );
+  }
+  if (query.dag) {
+    parcels = parcels.filter((p) => isDagMatch(p.dagNo, query.dag));
+  }
   return parcels;
 };
 
 export const getParcelByUlpinOrDag = async (identifier: string) => {
+  const variants = getSearchVariants(identifier);
+
   try {
-    const res = await pool.query(
-      "SELECT data_json FROM land_parcels WHERE ulpin ILIKE $1 OR dag_no = $1 OR current_khatian_no ILIKE $1 LIMIT 1;",
-      [identifier]
-    );
-    if (res.rows.length > 0) {
-      return res.rows[0].data_json as ILandParcel;
+    for (const v of variants) {
+      const res = await pool.query(
+        "SELECT data_json FROM land_parcels WHERE ulpin ILIKE $1 OR dag_no = $1 OR current_khatian_no ILIKE $1 LIMIT 1;",
+        [v]
+      );
+      if (res.rows.length > 0) {
+        return res.rows[0].data_json as ILandParcel;
+      }
     }
   } catch (error) {
     console.warn("DB single query fallback:", error);
@@ -58,9 +87,9 @@ export const getParcelByUlpinOrDag = async (identifier: string) => {
 
   const parcel = syntheticLandParcels.find(
     (p) =>
-      p.ulpin.toLowerCase() === identifier.toLowerCase() ||
-      p.dagNo === identifier ||
-      p.currentKhatianNo.toLowerCase() === identifier.toLowerCase()
+      variants.some((v) => p.ulpin.toLowerCase() === v.toLowerCase()) ||
+      isDagMatch(p.dagNo, identifier) ||
+      variants.some((v) => p.currentKhatianNo.toLowerCase().includes(v.toLowerCase()))
   );
   return parcel || null;
 };

@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { useLanguage } from "../../context/LanguageContext";
 import { fallbackMutations, fallbackParcels } from "../../lib/api";
+import { isDagMatch } from "../../lib/digitConverter";
 import { IMutationApplication } from "../../types";
 import {
   Lock,
@@ -46,7 +47,7 @@ function AdminContent() {
   const [mutationsList, setMutationsList] = useState<IMutationApplication[]>(fallbackMutations);
 
   const handleRunSubRegAudit = () => {
-    const parcel = fallbackParcels.find((p) => p.dagNo === subRegDag);
+    const parcel = fallbackParcels.find((p) => isDagMatch(p.dagNo, subRegDag));
     if (!parcel) {
       setShieldAlert({
         triggered: true,

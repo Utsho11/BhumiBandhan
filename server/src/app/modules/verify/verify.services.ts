@@ -1,5 +1,7 @@
 import crypto from "crypto";
-import { syntheticLandParcels } from "../../../data/land-records";
+import { ILandParcel, syntheticLandParcels } from "../../../data/land-records";
+import { pool } from "../../../utils/pg";
+import { isDagMatch, getSearchVariants } from "../../../utils/digitConverter";
 
 export interface ICheckPlotInput {
   division: string;
@@ -12,12 +14,41 @@ export interface ICheckPlotInput {
 }
 
 export const checkPlotRiskAudit = async (input: ICheckPlotInput) => {
-  // Find parcel by mouza and dag
-  const parcel = syntheticLandParcels.find(
-    (p) =>
-      (p.mouzaBn.includes(input.mouza) || p.mouzaEn.toLowerCase().includes(input.mouza.toLowerCase())) &&
-      (p.dagNo === input.dagNo || p.dagNo.includes(input.dagNo))
-  );
+  const dagVariants = getSearchVariants(input.dagNo);
+  let parcel: ILandParcel | null = null;
+
+  // 1. Try DB first
+  try {
+    for (const v of dagVariants) {
+      const res = await pool.query(
+        "SELECT data_json FROM land_parcels WHERE dag_no = $1 OR ulpin ILIKE $1 LIMIT 1;",
+        [v]
+      );
+      if (res.rows.length > 0) {
+        parcel = res.rows[0].data_json as ILandParcel;
+        break;
+      }
+    }
+  } catch (err) {
+    console.warn("DB audit lookup fallback:", err);
+  }
+
+  // 2. Fallback to memory
+  if (!parcel) {
+    parcel =
+      syntheticLandParcels.find((p) => {
+        const matchDag = isDagMatch(p.dagNo, input.dagNo) || isDagMatch(p.ulpin, input.dagNo);
+        if (!matchDag) return false;
+        if (!input.mouza) return true;
+        const m = input.mouza.toLowerCase();
+        return (
+          p.mouzaBn.toLowerCase().includes(m) ||
+          m.includes(p.mouzaBn.toLowerCase()) ||
+          p.mouzaEn.toLowerCase().includes(m) ||
+          m.includes(p.mouzaEn.toLowerCase())
+        );
+      }) || null;
+  }
 
   if (!parcel) {
     return {
@@ -162,7 +193,7 @@ export const testAntiDoubleSellingAttempt = (input: {
   sellerNid: string;
   transferAreaSatak: number;
 }) => {
-  const parcel = syntheticLandParcels.find((p) => p.dagNo === input.dagNo);
+  const parcel = syntheticLandParcels.find((p) => isDagMatch(p.dagNo, input.dagNo));
 
   if (!parcel) {
     return {

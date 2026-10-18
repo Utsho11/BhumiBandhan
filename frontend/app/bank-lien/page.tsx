@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { useLanguage } from "../../context/LanguageContext";
 import { fallbackParcels } from "../../lib/api";
+import { isDagMatch } from "../../lib/digitConverter";
 import { IBankLien } from "../../types";
 import {
   Building2,
@@ -20,7 +21,7 @@ export default function BankLienPage() {
   const { language } = useLanguage();
   const [selectedDag, setSelectedDag] = useState("782");
   const [activeLiens, setActiveLiens] = useState<IBankLien[]>(
-    fallbackParcels.find((p) => p.dagNo === "782")?.liens || []
+    fallbackParcels.find((p) => isDagMatch(p.dagNo, "782"))?.liens || []
   );
 
   const [showAddModal, setShowAddModal] = useState(false);
@@ -30,7 +31,7 @@ export default function BankLienPage() {
 
   const handleSearch = (dag: string) => {
     setSelectedDag(dag);
-    const parcel = fallbackParcels.find((p) => p.dagNo === dag);
+    const parcel = fallbackParcels.find((p) => isDagMatch(p.dagNo, dag));
     setActiveLiens(parcel ? parcel.liens : []);
   };
 

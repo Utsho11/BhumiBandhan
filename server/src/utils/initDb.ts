@@ -185,6 +185,24 @@ export async function initDatabase() {
       ON CONFLICT (id) DO NOTHING;
     `);
 
+    // Seed mock bank liens
+    await client.query(`
+      INSERT INTO bank_liens (lien_id, dag_no, bank_name_bn, bank_name_en, branch_name, loan_account_number, mortgage_amount_bdt, issue_date, status, deed_mortgaged_no)
+      VALUES 
+        ('LIEN-SBL-2024-90', '৭৮২', 'সোনালী ব্যাংক পিএলসি', 'Sonali Bank PLC', 'সাভার কর্পোরেট শাখা', 'A/C-0142-SME-902', 4500000, '2024-06-18', 'active', 'MORT-2024-118'),
+        ('LIEN-DBBL-2025-12', '১৪২৫', 'ডাচ-বাংলা ব্যাংক পিএলসি', 'Dutch-Bangla Bank PLC', 'সাভার বাজার শাখা', 'A/C-0992-AGRI-101', 1200000, '2023-01-10', 'released', 'MORT-2023-004')
+      ON CONFLICT (lien_id) DO NOTHING;
+    `);
+
+    // Seed mock user saved parcels
+    await client.query(`
+      INSERT INTO user_saved_parcels (user_id, ulpin, dag_no, notes)
+      VALUES 
+        ('USR-001', '26-26-72-082-01425', '১৪২৫', 'আমার পৈতৃক বাস্তু ভিটি জমি'),
+        ('USR-001', '26-26-72-045-00782', '৭৮২', 'বিরুলিয়া মৌজার নাল জমি (সোনালী ব্যাংক ঋণাধীন)')
+      ON CONFLICT DO NOTHING;
+    `);
+
     client.release();
     console.log("\x1b[32m✔ [PostgreSQL] Database schema initialized and seeded successfully!\x1b[0m");
   } catch (error: any) {

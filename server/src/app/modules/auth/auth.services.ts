@@ -7,18 +7,23 @@ export interface IUserProfile {
   nameEn: string;
   role: "citizen" | "ac_land" | "sub_registrar" | "bank_officer" | "admin";
   email: string;
+  nidMasked?: string;
+  phoneMasked?: string;
   officeBn?: string;
   designationBn?: string;
 }
 
-const mockUsers: (IUserProfile & { password: string })[] = [
+let mockUsers: (IUserProfile & { password: string })[] = [
   {
     id: "USR-001",
-    nameBn: "তানভীর আহমেদ (নাগরিক)",
+    nameBn: "তানভীর আহমেদ",
     nameEn: "Tanvir Ahmed",
     role: "citizen",
     email: "citizen@bhumibandhan.gov.bd",
     password: "password123",
+    nidMasked: "1988-XXXX-XXXX-0192",
+    phoneMasked: "01711-XXXX92",
+    designationBn: "সাধারণ নাগরিক (জমি ক্রেতা/মালিক)",
   },
   {
     id: "USR-002",
@@ -62,6 +67,39 @@ const mockUsers: (IUserProfile & { password: string })[] = [
   },
 ];
 
+export const registerUser = async (payload: {
+  nameBn: string;
+  nameEn?: string;
+  email: string;
+  password?: string;
+  nid: string;
+  phone: string;
+}) => {
+  const existing = mockUsers.find((u) => u.email.toLowerCase() === payload.email.toLowerCase());
+  if (existing) {
+    throw new Error("এই ইমেইল ঠিকানা দিয়ে ইতিমধ্যে একটি অ্যাকাউন্ট নিবন্ধিত রয়েছে।");
+  }
+
+  const newUser: IUserProfile & { password: string } = {
+    id: `USR-${Date.now().toString().slice(-4)}`,
+    nameBn: payload.nameBn,
+    nameEn: payload.nameEn || payload.nameBn,
+    role: "citizen",
+    email: payload.email,
+    password: payload.password || "password123",
+    nidMasked: payload.nid.slice(0, 4) + "-XXXX-XXXX-" + payload.nid.slice(-4),
+    phoneMasked: payload.phone.slice(0, 5) + "-XXXX" + payload.phone.slice(-2),
+    designationBn: "নিবন্ধিত নাগরিক",
+  };
+
+  mockUsers.push(newUser);
+
+  const { password, ...userWithoutPassword } = newUser;
+  const token = jwt.sign(userWithoutPassword, config.jwtSecret, { expiresIn: "7d" });
+
+  return { user: userWithoutPassword, token };
+};
+
 export const loginUser = async (credentials: { email: string; password?: string; role?: string }) => {
   const user = mockUsers.find(
     (u) =>
@@ -70,13 +108,13 @@ export const loginUser = async (credentials: { email: string; password?: string;
   );
 
   if (!user) {
-    // Return default citizen profile for instant seamless demo without password friction
     const defaultCitizen: IUserProfile = {
       id: "DEMO-CITIZEN",
       nameBn: "ডেমো নাগরিক ব্যবহারকারী",
       nameEn: "Demo Citizen User",
       role: "citizen",
       email: credentials.email || "demo@citizen.bd",
+      designationBn: "অতিথি নাগরিক",
     };
     const token = jwt.sign(defaultCitizen, config.jwtSecret, { expiresIn: "7d" });
     return { user: defaultCitizen, token };

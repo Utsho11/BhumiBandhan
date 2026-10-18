@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { LanguageProvider } from "../context/LanguageContext";
+import { AuthProvider } from "../context/AuthContext";
 import { Navbar } from "../components/Navbar";
 import { Footer } from "../components/Footer";
 
@@ -19,9 +20,11 @@ export default function RootLayout({
     <html lang="bn">
       <body className="min-h-screen flex flex-col bg-[#F8FAFC] text-[#0F172A] antialiased">
         <LanguageProvider>
-          <Navbar />
-          <main className="flex-1">{children}</main>
-          <Footer />
+          <AuthProvider>
+            <Navbar />
+            <main className="flex-1">{children}</main>
+            <Footer />
+          </AuthProvider>
         </LanguageProvider>
       </body>
     </html>

@@ -15,7 +15,7 @@ export const getParcels = catchAsync(async (req: Request, res: Response) => {
 });
 
 export const getSingleParcel = catchAsync(async (req: Request, res: Response) => {
-  const { identifier } = req.params;
+  const identifier = req.params.identifier as string;
   const result = await parcelServices.getParcelByUlpinOrDag(identifier);
 
   if (!result) {

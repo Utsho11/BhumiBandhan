@@ -2,10 +2,10 @@
   "name": "bhumibandhan-server",
   "version": "1.0.0",
   "description": "Backend API for BhumiBandhan Land Tech Protocol",
-  "main": "src/server.ts",
+  "main": "dist/server.js",
   "scripts": {
     "dev": "tsx watch src/server.ts",
-    "build": "tsup src/server.ts --format cjs,esm --dts",
+    "build": "tsc",
     "start": "node dist/server.js"
   },
   "dependencies": {
@@ -28,7 +28,6 @@
     "@types/jsonwebtoken": "^9.0.9",
     "@types/node": "^22.13.10",
     "@types/pg": "^8.23.1",
-    "tsup": "^9.0.0",
     "tsx": "^4.19.3",
     "typescript": "^5.8.2"
   }

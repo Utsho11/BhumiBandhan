@@ -15,7 +15,7 @@ export const getMutationsList = catchAsync(async (req: Request, res: Response) =
 });
 
 export const getSingleMutation = catchAsync(async (req: Request, res: Response) => {
-  const { token } = req.params;
+  const token = req.params.token as string;
   const result = await mutationServices.getMutationByTokenOrId(token);
 
   if (!result) {
@@ -47,7 +47,7 @@ export const applyMutation = catchAsync(async (req: Request, res: Response) => {
 });
 
 export const updateStage = catchAsync(async (req: Request, res: Response) => {
-  const { id } = req.params;
+  const id = req.params.id as string;
   const result = await mutationServices.updateMutationStage(id, req.body);
 
   if (!result) {

@@ -4,7 +4,7 @@ import { sendResponse } from "../../../shared/sendResponse";
 import * as lienServices from "./lien.services";
 
 export const getLiens = catchAsync(async (req: Request, res: Response) => {
-  const { dagNo } = req.params;
+  const dagNo = req.params.dagNo as string;
   const result = await lienServices.getPlotLiens(dagNo);
 
   sendResponse(res, {
@@ -29,7 +29,8 @@ export const addLien = catchAsync(async (req: Request, res: Response) => {
 });
 
 export const releaseLien = catchAsync(async (req: Request, res: Response) => {
-  const { dagNo, lienId } = req.params;
+  const dagNo = req.params.dagNo as string;
+  const lienId = req.params.lienId as string;
   const result = await lienServices.releaseBankLien(dagNo, lienId);
 
   if (!result) {

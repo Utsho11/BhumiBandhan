@@ -1,6 +1,6 @@
 import { ILandParcel, IMutationApplication } from "../types";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "https://server-pied-eta.vercel.app/api";
 
 export const fetchParcels = async (query?: { mouza?: string; dag?: string; ulpin?: string }): Promise<ILandParcel[]> => {
   try {

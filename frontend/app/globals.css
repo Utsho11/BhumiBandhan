@@ -1,0 +1,99 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #064E3B;
+  --color-primary-hover: #04382A;
+  --color-primary-container: #0D5C3A;
+  --color-on-primary: #FFFFFF;
+
+  --color-accent-red: #DC2626;
+  --color-accent-red-hover: #B91C1C;
+  --color-accent-red-surface: #FEF2F2;
+  --color-accent-red-border: #FCA5A5;
+
+  --color-status-success: #059669;
+  --color-status-success-bg: #ECFDF5;
+  --color-status-success-border: #A7F3D0;
+
+  --color-status-warning: #D97706;
+  --color-status-warning-bg: #FFFBEB;
+  --color-status-warning-border: #FDE68A;
+
+  --color-status-info: #0284C7;
+  --color-status-info-bg: #F0F9FF;
+  --color-status-info-border: #BAE6FD;
+
+  --color-surface-main: #F8FAFC;
+  --color-surface-card: #FFFFFF;
+  --color-surface-subtle: #F1F5F9;
+  --color-surface-dark: #064E3B;
+  --color-surface-dark-elevated: #085B45;
+
+  --color-text-primary: #0F172A;
+  --color-text-secondary: #475569;
+  --color-text-muted: #94A3B8;
+  --color-text-on-dark: #F8FAFC;
+
+  --color-border-subtle: #E2E8F0;
+  --color-border-strong: #CBD5E1;
+}
+
+:root {
+  --primary: #064E3B;
+  --primary-hover: #04382A;
+  --primary-container: #0D5C3A;
+  --on-primary: #FFFFFF;
+
+  --accent-red: #DC2626;
+  --accent-red-hover: #B91C1C;
+  --accent-red-surface: #FEF2F2;
+  --accent-red-border: #FCA5A5;
+
+  --status-success: #059669;
+  --status-success-bg: #ECFDF5;
+  --status-success-border: #A7F3D0;
+
+  --status-warning: #D97706;
+  --status-warning-bg: #FFFBEB;
+  --status-warning-border: #FDE68A;
+
+  --status-info: #0284C7;
+  --status-info-bg: #F0F9FF;
+  --status-info-border: #BAE6FD;
+
+  --surface-main: #F8FAFC;
+  --surface-card: #FFFFFF;
+  --surface-subtle: #F1F5F9;
+  --surface-dark: #064E3B;
+  --surface-dark-elevated: #085B45;
+
+  --text-primary: #0F172A;
+  --text-secondary: #475569;
+  --text-muted: #94A3B8;
+  --text-on-dark: #F8FAFC;
+
+  --border-subtle: #E2E8F0;
+  --border-strong: #CBD5E1;
+}
+
+body {
+  background-color: var(--surface-main);
+  color: var(--text-primary);
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Civic UI Utilities */
+.civic-card {
+  background-color: var(--surface-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 0.75rem;
+  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.05), 0 1px 2px -1px rgb(0 0 0 / 0.05);
+}
+
+.civic-card-elevated {
+  background-color: var(--surface-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 1rem;
+  box-shadow: 0 10px 25px -5px rgb(6 78 59 / 0.08), 0 8px 10px -6px rgb(6 78 59 / 0.05);
+}

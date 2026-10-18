@@ -18,6 +18,7 @@ import {
   LogIn,
   LogOut,
   User,
+  LayoutDashboard,
 } from "lucide-react";
 
 export const Navbar: React.FC = () => {
@@ -28,6 +29,7 @@ export const Navbar: React.FC = () => {
 
   const navLinks = [
     { href: "/", label: t("nav_home"), icon: ShieldCheck },
+    { href: "/dashboard", label: language === "bn" ? "নাগরিক প্যানেল" : "User Panel", icon: LayoutDashboard },
     { href: "/check-before-you-buy", label: t("nav_check_buy"), icon: Search },
     { href: "/baya-chain", label: t("nav_baya_chain"), icon: FileText },
     { href: "/mutation", label: t("nav_mutation"), icon: UserCheck },
@@ -61,7 +63,7 @@ export const Navbar: React.FC = () => {
           <span className="font-medium tracking-wide">{t("gov_badge")}</span>
         </div>
         <div className="flex items-center gap-4 text-[11px] opacity-90">
-          <span className="hidden sm:inline">ল্যাব: DIU CSE & Law Hackathon 2026</span>
+          <span className="hidden sm:inline">টিম: Porcha Builder DIU | LandTech 2026</span>
           <button
             onClick={toggleLanguage}
             className="flex items-center gap-1.5 bg-[#0D5C3A] hover:bg-[#04382A] text-white px-2.5 py-0.5 rounded-full text-xs font-semibold transition border border-emerald-600/40 cursor-pointer"
@@ -90,7 +92,7 @@ export const Navbar: React.FC = () => {
                 </span>
               </div>
               <p className="text-[11px] text-[#475569] hidden sm:block">
-                {t("app_tagline")}
+                টিম: Porcha Builder DIU | {t("app_tagline")}
               </p>
             </div>
           </Link>
@@ -121,10 +123,10 @@ export const Navbar: React.FC = () => {
           <div className="flex items-center gap-2.5">
             {isAuthenticated && user ? (
               <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-xl">
-                <div className="w-7 h-7 rounded-lg bg-[#064E3B] text-white flex items-center justify-center font-bold text-xs">
+                <Link href="/dashboard" className="w-7 h-7 rounded-lg bg-[#064E3B] text-white flex items-center justify-center font-bold text-xs hover:scale-105 transition">
                   <User className="w-4 h-4 text-emerald-300" />
-                </div>
-                <div className="text-left hidden sm:block">
+                </Link>
+                <Link href="/dashboard" className="text-left hidden sm:block hover:opacity-80">
                   <div className="flex items-center gap-1.5">
                     <span className="text-xs font-bold text-slate-900 leading-none">{user.nameBn}</span>
                     <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded border ${roleInfo.color}`}>
@@ -132,7 +134,7 @@ export const Navbar: React.FC = () => {
                     </span>
                   </div>
                   <span className="text-[10px] text-slate-500 block leading-tight">{user.officeBn || user.email}</span>
-                </div>
+                </Link>
                 <button
                   onClick={logout}
                   title="লগআউট"
@@ -186,16 +188,6 @@ export const Navbar: React.FC = () => {
               </Link>
             );
           })}
-          {!isAuthenticated && (
-            <Link
-              href="/login"
-              onClick={() => setMobileMenuOpen(false)}
-              className="flex items-center gap-2 px-3 py-2 text-sm font-bold text-[#064E3B]"
-            >
-              <LogIn className="w-4 h-4" />
-              <span>লগইন / নিবন্ধন</span>
-            </Link>
-          )}
         </div>
       )}
     </header>

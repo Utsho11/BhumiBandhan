@@ -29,7 +29,7 @@ export const Footer: React.FC = () => {
             </p>
             <div className="flex items-center gap-2 text-xs text-emerald-200/90 pt-1">
               <Award className="w-4 h-4 text-[#FDE68A]" />
-              <span>LandTech Innovation Hackathon 2026 Entry</span>
+              <span>টিম: <strong>Porcha Builder DIU</strong> | LandTech Innovation Hackathon 2026</span>
             </div>
           </div>
 

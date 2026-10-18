@@ -1,5 +1,6 @@
 import jwt from "jsonwebtoken";
 import config from "../../../config";
+import { pool } from "../../../utils/pg";
 
 export interface IUserProfile {
   id: string;
@@ -75,32 +76,63 @@ export const registerUser = async (payload: {
   nid: string;
   phone: string;
 }) => {
-  const existing = mockUsers.find((u) => u.email.toLowerCase() === payload.email.toLowerCase());
-  if (existing) {
-    throw new Error("এই ইমেইল ঠিকানা দিয়ে ইতিমধ্যে একটি অ্যাকাউন্ট নিবন্ধিত রয়েছে।");
+  const nidMasked = payload.nid.slice(0, 4) + "-XXXX-XXXX-" + payload.nid.slice(-4);
+  const phoneMasked = payload.phone.slice(0, 5) + "-XXXX" + payload.phone.slice(-2);
+  const newId = `USR-${Date.now().toString().slice(-5)}`;
+
+  try {
+    await pool.query(
+      `INSERT INTO users (id, name_bn, name_en, email, password, role, nid_masked, phone_masked, designation_bn)
+       VALUES ($1, $2, $3, $4, $5, 'citizen', $6, $7, 'নিবন্ধিত নাগরিক')
+       ON CONFLICT (email) DO NOTHING;`,
+      [newId, payload.nameBn, payload.nameEn || payload.nameBn, payload.email, payload.password || "password123", nidMasked, phoneMasked]
+    );
+  } catch (error) {
+    console.warn("DB user insert fallback:", error);
   }
 
-  const newUser: IUserProfile & { password: string } = {
-    id: `USR-${Date.now().toString().slice(-4)}`,
+  const newUser: IUserProfile = {
+    id: newId,
     nameBn: payload.nameBn,
     nameEn: payload.nameEn || payload.nameBn,
     role: "citizen",
     email: payload.email,
-    password: payload.password || "password123",
-    nidMasked: payload.nid.slice(0, 4) + "-XXXX-XXXX-" + payload.nid.slice(-4),
-    phoneMasked: payload.phone.slice(0, 5) + "-XXXX" + payload.phone.slice(-2),
+    nidMasked,
+    phoneMasked,
     designationBn: "নিবন্ধিত নাগরিক",
   };
 
-  mockUsers.push(newUser);
-
-  const { password, ...userWithoutPassword } = newUser;
-  const token = jwt.sign(userWithoutPassword, config.jwtSecret, { expiresIn: "7d" });
-
-  return { user: userWithoutPassword, token };
+  mockUsers.push({ ...newUser, password: payload.password || "password123" });
+  const token = jwt.sign(newUser, config.jwtSecret, { expiresIn: "7d" });
+  return { user: newUser, token };
 };
 
 export const loginUser = async (credentials: { email: string; password?: string; role?: string }) => {
+  try {
+    const res = await pool.query(
+      "SELECT id, name_bn, name_en, email, role, nid_masked, phone_masked, office_bn, designation_bn FROM users WHERE email ILIKE $1 OR role = $2 LIMIT 1;",
+      [credentials.email, credentials.role || ""]
+    );
+    if (res.rows.length > 0) {
+      const dbUser = res.rows[0];
+      const userObj: IUserProfile = {
+        id: dbUser.id,
+        nameBn: dbUser.name_bn,
+        nameEn: dbUser.name_en || dbUser.name_bn,
+        role: dbUser.role,
+        email: dbUser.email,
+        nidMasked: dbUser.nid_masked,
+        phoneMasked: dbUser.phone_masked,
+        officeBn: dbUser.office_bn,
+        designationBn: dbUser.designation_bn,
+      };
+      const token = jwt.sign(userObj, config.jwtSecret, { expiresIn: "7d" });
+      return { user: userObj, token };
+    }
+  } catch (error) {
+    console.warn("DB user login fallback:", error);
+  }
+
   const user = mockUsers.find(
     (u) =>
       u.email.toLowerCase() === credentials.email.toLowerCase() ||
@@ -110,8 +142,8 @@ export const loginUser = async (credentials: { email: string; password?: string;
   if (!user) {
     const defaultCitizen: IUserProfile = {
       id: "DEMO-CITIZEN",
-      nameBn: "ডেমো নাগরিক ব্যবহারকারী",
-      nameEn: "Demo Citizen User",
+      nameBn: "তানভীর আহমেদ (নাগরিক)",
+      nameEn: "Tanvir Ahmed",
       role: "citizen",
       email: credentials.email || "demo@citizen.bd",
       designationBn: "অতিথি নাগরিক",
@@ -122,13 +154,25 @@ export const loginUser = async (credentials: { email: string; password?: string;
 
   const { password, ...userWithoutPassword } = user;
   const token = jwt.sign(userWithoutPassword, config.jwtSecret, { expiresIn: "7d" });
-
-  return {
-    user: userWithoutPassword,
-    token,
-  };
+  return { user: userWithoutPassword, token };
 };
 
 export const getAvailableDemoAccounts = async () => {
+  try {
+    const res = await pool.query("SELECT id, name_bn, name_en, email, role, office_bn, designation_bn FROM users;");
+    if (res.rows.length > 0) {
+      return res.rows.map((r) => ({
+        id: r.id,
+        nameBn: r.name_bn,
+        nameEn: r.name_en,
+        email: r.email,
+        role: r.role,
+        officeBn: r.office_bn,
+        designationBn: r.designation_bn,
+      }));
+    }
+  } catch (error) {
+    console.warn("DB accounts fallback:", error);
+  }
   return mockUsers.map(({ password, ...rest }) => rest);
 };

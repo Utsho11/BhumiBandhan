@@ -19,7 +19,17 @@ import {
   RefreshCw,
 } from "lucide-react";
 
+import { AuthGuard } from "../../components/auth/AuthGuard";
+
 export default function AdminPage() {
+  return (
+    <AuthGuard allowedRoles={["admin", "ac_land", "sub_registrar"]} requiredRoleNameBn="ভূমি কর্মকর্তা (এসি ল্যান্ড বা সাব-রেজিস্ট্রার)">
+      <AdminContent />
+    </AuthGuard>
+  );
+}
+
+function AdminContent() {
   const { language } = useLanguage();
   const [activeRole, setActiveRole] = useState<"ac_land" | "sub_registrar" | "admin">("ac_land");
 

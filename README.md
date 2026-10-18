@@ -98,6 +98,6 @@ In strict compliance with **Section 10 of the LandTech 2026 Rule Book**:
 ---
 
 ## 👥 Hackathon Team & Acknowledgments
-- **Team Name:** BhumiBandhan Innovators
+- **Team Name:** Porcha Builder DIU
 - **Affiliation:** Department of Computer Science & Engineering, Daffodil International University (DIU)
 - **Supported by:** Department of Law, Daffodil International University

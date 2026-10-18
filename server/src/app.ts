@@ -32,7 +32,12 @@ const allowedOrigins = [config.clientUrl, "http://localhost:3000", "http://127.0
 
 const corsOptions: cors.CorsOptions = {
   origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes(origin) || config.env !== "production") {
+    if (
+      !origin ||
+      allowedOrigins.includes(origin) ||
+      origin.endsWith(".vercel.app") ||
+      config.env !== "production"
+    ) {
       callback(null, true);
     } else {
       callback(new Error(`CORS Error: Origin ${origin} not allowed`));
